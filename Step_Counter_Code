@@ -1,0 +1,104 @@
+#include <M5Core2.h>
+
+// Variables needed for step counter
+int step = 0;
+float total = 0;
+int ctr = 0;
+float average = 1.1;
+float breadth = average / 10;
+boolean state = false;
+boolean idolstate = false;
+int goalA = 2500, goalB = 7500, goalC = 10000;
+int goal = 0;
+int choice = 0;
+
+//Prints the options for the user on the device
+void printMenu()
+{
+  M5.Lcd.printf("Press a button:\n");
+  M5.Lcd.printf("Button A - 2500 steps\n");
+  M5.Lcd.printf("Button B - 7500 steps\n");
+  M5.Lcd.printf("Button C - 10000 steps\n");  
+}
+void setup()
+{
+  M5.begin();
+
+  //Font Size & Background colour
+  M5.Lcd.setRotation(1);
+  M5.Lcd.fillScreen(BLACK);
+  M5.Lcd.setTextSize(2);
+  M5.Lcd.setCursor(0,80);
+  printMenu();
+   
+  // The sensor we are using in the M5
+  M5.IMU.Init();
+}
+
+
+void loop()
+{
+  //loop if each of the buttons were pressed-what would be executed
+  M5.update();
+  if (M5.BtnA.wasPressed()){
+    choice = 1;
+    goal = goalA;
+  }else if (M5.BtnB.wasPressed()){
+    choice = 2;
+        goal = goalB;
+  }else if (M5.BtnC.wasPressed()){
+    choice = 3;
+    goal = goalC;
+  }
+  if(!choice){
+        return;
+  }else if(choice && step >= goal){
+          M5.Lcd.printf("                                                                                                                                                            CONGRATULATIONS YOU REACHED YOUR GOAL OF %d STEPS\n", goal);        
+          step = 0;
+          while(!M5.BtnA.isReleased() && !M5.BtnB.isReleased() && !M5.BtnC.isReleased()){
+              M5.update();
+          }
+          return;
+  }
+  // Accelerometer value for x,y,z axis.
+  float accX = 0;
+  float accY = 0;
+  float accZ = 0;
+
+  // Getting the accelrator sensor from the M5
+  M5.IMU.getAccelData(&accX, &accY, &accZ);
+
+  //Formula for measuring the magnitude of the acceleration
+  float accel = sqrt(accX * accX + accY * accY + accZ * accZ);
+
+  // Calculating the average acceleration for comparison
+  if (ctr < 100) {
+    total += accel;
+    ctr += 1;
+  } else {
+    average = total / ctr;
+    breadth = average / 10;
+    total = average;
+    ctr = 1;
+  }
+
+  // Instantaneous Acceleration
+  if (accel > average + breadth) {
+    state = true;
+  } else if (accel < average - breadth) {
+    state = false;
+  }
+
+  // Increment step
+  if (!idolstate && state) {
+    step += 1;
+    // Display step on the M5
+    M5.Lcd.setCursor(0, 0);
+    M5.Lcd.printf("Current Goal: %d steps\n", goal);
+    M5.Lcd.println(" ");
+    M5.Lcd.printf("Number of Steps: %5d\n", step);
+  }
+  idolstate = state;
+
+  delay(50);
+}
